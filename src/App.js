@@ -220,6 +220,115 @@ const InterceptionSystem = () => {
     }
   };
 
+  const addNewInterception = async (item) => {
+    try {
+      const formatted = {
+        record_number: item.recordNumber,
+        name: item.name || '',
+        phone: item.phone || '',
+        hp: item.hp || '',
+        importance: item.importance || '',
+        call_nature: item.callNature || '',
+        source: item.source || '',
+        notes: item.notes || '',
+        assigned_agent: item.assignedAgent || '',
+        status: item.status || '',
+        agent_notes: item.agentNotes || '',
+        created_by: item.createdBy || '',
+        created_at: item.createdAt || ''
+      };
+      
+      const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions', {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(formatted)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to insert: ' + response.status);
+      }
+
+      const result = await response.json();
+      console.log('✅ Added new interception:', result);
+      return result[0]; // מחזיר את הרשומה החדשה עם ה-ID מה-DB
+    } catch (error) {
+      console.error('Error adding interception:', error);
+      setFormError('שגיאה בשמירת רשומה חדשה');
+      setTimeout(() => setFormError(''), 3000);
+      throw error;
+    }
+  };
+
+  const updateInterception = async (item) => {
+    try {
+      const formatted = {
+        record_number: item.recordNumber,
+        name: item.name || '',
+        phone: item.phone || '',
+        hp: item.hp || '',
+        importance: item.importance || '',
+        call_nature: item.callNature || '',
+        source: item.source || '',
+        notes: item.notes || '',
+        assigned_agent: item.assignedAgent || '',
+        status: item.status || '',
+        agent_notes: item.agentNotes || '',
+        created_by: item.createdBy || '',
+        created_at: item.createdAt || ''
+      };
+      
+      const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?id=eq.' + item.id, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(formatted)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update: ' + response.status);
+      }
+
+      console.log('✅ Updated interception ID:', item.id);
+    } catch (error) {
+      console.error('Error updating interception:', error);
+      setFormError('שגיאה בעדכון רשומה');
+      setTimeout(() => setFormError(''), 3000);
+      throw error;
+    }
+  };
+
+  const deleteInterception = async (id) => {
+    try {
+      const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?id=eq.' + id, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete: ' + response.status);
+      }
+
+      console.log('✅ Deleted interception ID:', id);
+    } catch (error) {
+      console.error('Error deleting interception:', error);
+      setFormError('שגיאה במחיקת רשומה');
+      setTimeout(() => setFormError(''), 3000);
+      throw error;
+    }
+  };
+
   // ============================================
   // END OF DATABASE FUNCTIONS
   // ============================================
@@ -297,7 +406,7 @@ const InterceptionSystem = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name || !formData.phone || !formData.hp || !formData.importance || 
         !formData.callNature || !formData.source) {
       setFormError('אנא מלא את כל השדות החובה');
@@ -311,31 +420,55 @@ const InterceptionSystem = () => {
       : 0;
 
     const newInterception = {
-      id: Date.now(),
       recordNumber: maxRecordNumber + 1,
       ...formData,
       createdAt: getCurrentDateTime(),
       createdBy: userName
     };
-    const updatedData = [...interceptions, newInterception];
-    setInterceptions(updatedData);
-    saveToDatabase(updatedData);
-    setFormData({
-      name: '',
-      phone: '',
-      hp: '',
-      importance: '',
-      callNature: '',
-      source: '',
-      notes: '',
-      assignedAgent: '',
-      status: '',
-      agentNotes: ''
-    });
-    setCurrentPage('table');
+
+    try {
+      // שמירה ב-DB ותקבול ה-ID האמיתי
+      const savedInterception = await addNewInterception(newInterception);
+      
+      // עדכון ה-state עם הרשומה החדשה (כולל ה-ID מה-DB)
+      const formattedInterception = {
+        id: savedInterception.id,
+        recordNumber: savedInterception.record_number,
+        name: savedInterception.name || '',
+        phone: savedInterception.phone || '',
+        hp: savedInterception.hp || '',
+        importance: savedInterception.importance || '',
+        callNature: savedInterception.call_nature || '',
+        source: savedInterception.source || '',
+        notes: savedInterception.notes || '',
+        assignedAgent: savedInterception.assigned_agent || '',
+        status: savedInterception.status || '',
+        agentNotes: savedInterception.agent_notes || '',
+        createdBy: savedInterception.created_by || '',
+        createdAt: savedInterception.created_at || ''
+      };
+      
+      setInterceptions([...interceptions, formattedInterception]);
+      
+      setFormData({
+        name: '',
+        phone: '',
+        hp: '',
+        importance: '',
+        callNature: '',
+        source: '',
+        notes: '',
+        assignedAgent: '',
+        status: '',
+        agentNotes: ''
+      });
+      setCurrentPage('table');
+    } catch (error) {
+      console.error('Failed to save interception:', error);
+    }
   };
 
-  const handleFieldChange = (id, field, value) => {
+  const handleFieldChange = async (id, field, value) => {
     // עבור הערות נציג - רק עדכון מקומי, לא שמירה
     if (field === 'agentNotes') {
       setEditingNotes({...editingNotes, [id]: value});
@@ -343,20 +476,36 @@ const InterceptionSystem = () => {
     }
     
     // עבור שאר השדות - שמירה מיידית
+    const itemToUpdate = interceptions.find(item => item.id === id);
+    if (!itemToUpdate) return;
+    
+    const updatedItem = { ...itemToUpdate, [field]: value };
+    
+    // עדכון ב-DB
+    await updateInterception(updatedItem);
+    
+    // עדכון ה-state
     const updatedData = interceptions.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
+      item.id === id ? updatedItem : item
     );
     setInterceptions(updatedData);
-    saveToDatabase(updatedData);
   };
 
-  const handleSaveAgentNotes = (id) => {
+  const handleSaveAgentNotes = async (id) => {
     const noteValue = editingNotes[id] || '';
+    const itemToUpdate = interceptions.find(item => item.id === id);
+    if (!itemToUpdate) return;
+    
+    const updatedItem = { ...itemToUpdate, agentNotes: noteValue };
+    
+    // עדכון ב-DB
+    await updateInterception(updatedItem);
+    
+    // עדכון ה-state
     const updatedData = interceptions.map(item => 
-      item.id === id ? { ...item, agentNotes: noteValue } : item
+      item.id === id ? updatedItem : item
     );
     setInterceptions(updatedData);
-    saveToDatabase(updatedData);
     
     // נקה את ההערה הזמנית
     const newEditingNotes = {...editingNotes};
@@ -368,12 +517,15 @@ const InterceptionSystem = () => {
     setEditingRow({ ...item });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
+    // עדכון ב-DB
+    await updateInterception(editingRow);
+    
+    // עדכון ה-state
     const updatedData = interceptions.map(item => 
       item.id === editingRow.id ? editingRow : item
     );
     setInterceptions(updatedData);
-    saveToDatabase(updatedData);
     setEditingRow(null);
   };
 
@@ -381,10 +533,13 @@ const InterceptionSystem = () => {
     setDeleteConfirm(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    // מחיקה מה-DB
+    await deleteInterception(deleteConfirm);
+    
+    // עדכון ה-state
     const updatedData = interceptions.filter(item => item.id !== deleteConfirm);
     setInterceptions(updatedData);
-    saveToDatabase(updatedData);
     setDeleteConfirm(null);
   };
 
