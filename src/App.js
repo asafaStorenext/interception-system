@@ -351,7 +351,7 @@ const InterceptionSystem = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.phone || !formData.hp || !formData.importance || 
+    if (!formData.name || !formData.phone || !formData.hp || 
         !formData.callNature || !formData.source) {
       setFormError('אנא מלא את כל השדות החובה');
       setTimeout(() => setFormError(''), 3000);
@@ -627,7 +627,7 @@ const InterceptionSystem = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">חשיבות *</label>
+                  <label className="block text-gray-700 font-medium mb-2">חשיבות</label>
                   <select
                     value={formData.importance}
                     onChange={(e) => setFormData({...formData, importance: e.target.value})}
