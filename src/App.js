@@ -35,12 +35,7 @@ const InterceptionSystem = () => {
   // ============================================
   // INITIALIZATION & USER MANAGEMENT
   // ============================================
-  useEffect(() => {
-    initializeApp();
-    loadConfig();
-  }, [initializeApp, loadConfig]);
-
-
+  
   const loadConfig = useCallback(async () => {
     try {
       const response = await fetch('/config.json');
@@ -67,6 +62,11 @@ const InterceptionSystem = () => {
       loadInterceptions();
     }
   }, []);
+
+  useEffect(() => {
+    initializeApp();
+    loadConfig();
+  }, [initializeApp, loadConfig]);
 
   const getUserName = async () => {
     // שם משתמש נשמר ב-localStorage
