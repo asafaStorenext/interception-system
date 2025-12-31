@@ -739,7 +739,7 @@ const InterceptionSystem = () => {
                       <td className="p-2 md:p-3 text-sm">{item.hp}</td>
                       <td className="p-2 md:p-3">
                         <span className={'px-2 py-1 rounded-full text-xs font-medium border ' + getImportanceColor(item.importance)}>
-                          {item.importance}
+                          {item.importance || 'ללא'}
                         </span>
                       </td>
                       <td className="p-2 md:p-3">
