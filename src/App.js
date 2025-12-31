@@ -164,62 +164,6 @@ const InterceptionSystem = () => {
     loadConfig();
   }, [initializeApp, loadConfig]);
 
-  const saveToDatabase = async (data) => {
-    try {
-      // במקום למחוק ולהכניס מחדש, נעדכן כל רשומה בנפרד
-      for (const item of data) {
-        const formatted = {
-          id: item.id,
-          record_number: item.recordNumber,
-          name: item.name || '',
-          phone: item.phone || '',
-          hp: item.hp || '',
-          importance: item.importance || '',
-          call_nature: item.callNature || '',
-          source: item.source || '',
-          notes: item.notes || '',
-          assigned_agent: item.assignedAgent || '',
-          status: item.status || '',
-          agent_notes: item.agentNotes || '',
-          created_by: item.createdBy || '',
-          created_at: item.createdAt || ''
-        };
-        
-        // נסה לעדכן, אם לא קיים - הכנס חדש
-        const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?id=eq.' + item.id, {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': 'Bearer ' + SUPABASE_KEY,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify(formatted)
-        });
-        
-        // אם הרשומה לא קיימת, הכנס אותה
-        if (response.status === 404 || response.status === 406) {
-          await fetch(SUPABASE_URL + '/rest/v1/interceptions', {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': 'Bearer ' + SUPABASE_KEY,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(formatted)
-          });
-        }
-      }
-      
-      console.log('✅ Saved', data.length, 'records to Supabase');
-    } catch (error) {
-      console.error('Error saving to Supabase:', error);
-      setFormError('שגיאה בשמירת נתונים');
-      setTimeout(() => setFormError(''), 3000);
-    }
-  };
-
   const addNewInterception = async (item) => {
     try {
       const formatted = {
