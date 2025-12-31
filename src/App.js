@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Search, BarChart3, Edit2, X, Save, User } from 'lucide-react';
 
 const InterceptionSystem = () => {
@@ -35,12 +35,79 @@ const InterceptionSystem = () => {
   // ============================================
   // INITIALIZATION & USER MANAGEMENT
   // ============================================
-
-  const getUserName = useCallback(async () => {
-    return localStorage.getItem('userName');
+  useEffect(() => {
+    initializeApp();
+    loadConfig();
   }, []);
 
-  const loadInterceptions = useCallback(async () => {
+  const loadConfig = async () => {
+    try {
+      const response = await fetch('/config.json');
+      const data = await response.json();
+      
+      if (data.agents) setAgentOptions(data.agents);
+      if (data.importance) setImportanceOptions(data.importance);
+      if (data.callNature) setCallNatureOptions(data.callNature);
+      if (data.source) setSourceOptions(data.source);
+      if (data.status) setStatusOptions(data.status);
+      
+      console.log('✅ Loaded configuration');
+    } catch (error) {
+      console.error('Error loading config:', error);
+      // אם נכשל, השתמש ברשימות ברירת מחדל (כבר מוגדרות ב-state)
+    }
+  };
+
+  const initializeApp = async () => {
+    // בדיקת שם משתמש
+    const savedUserName = await getUserName();
+    if (!savedUserName) {
+      setShowNamePrompt(true);
+    } else {
+      setUserName(savedUserName);
+      loadInterceptions();
+    }
+  };
+
+  const getUserName = async () => {
+    // שם משתמש נשמר ב-localStorage
+    return localStorage.getItem('userName');
+  };
+
+  const saveUserName = async (name) => {
+    // שם משתמש נשמר ב-localStorage
+    localStorage.setItem('userName', name);
+  };
+
+  const handleSaveName = () => {
+    if (!tempName.trim()) {
+      alert('אנא הזן שם מלא');
+      return;
+    }
+    setUserName(tempName);
+    saveUserName(tempName);
+    setShowNamePrompt(false);
+    setShowNameEdit(false);
+    loadInterceptions();
+  };
+
+  const handleEditUserName = () => {
+    setTempName(userName);
+    setShowNameEdit(true);
+  };
+
+  // ============================================
+  // DATABASE CONFIGURATION - Supabase
+  // ============================================
+  
+  const SUPABASE_URL = 'https://xerogacrvmrbbawnhqdt.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhlcm9nYWNydm1yYmJhd25ocWR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzA0NzMsImV4cCI6MjA4Mjc0NjQ3M30.v0BmaZmy35ExecqZXNnjFoYk3k8ByR4skUWIuxkvSyk';
+  
+  // ============================================
+  // DATABASE FUNCTIONS - Supabase
+  // ============================================
+  
+  const loadInterceptions = async () => {
     try {
       const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?select=*&order=record_number.asc', {
         headers: {
@@ -79,117 +146,57 @@ const InterceptionSystem = () => {
       setFormError('שגיאה בטעינת נתונים. בדוק את החיבור ל-Supabase');
       setTimeout(() => setFormError(''), 3000);
     }
-  }, []); 
-  
-  const loadConfig = useCallback(async () => {
-    try {
-      const response = await fetch('/config.json');
-      const data = await response.json();
-
-      if (data.agents) setAgentOptions(data.agents);
-      if (data.importance) setImportanceOptions(data.importance);
-      if (data.callNature) setCallNatureOptions(data.callNature);
-      if (data.source) setSourceOptions(data.source);
-      if (data.status) setStatusOptions(data.status);
-
-      console.log('✅ Loaded configuration');
-    } catch (error) {
-      console.error('Error loading config:', error);
-    }
-  }, []);
-
-
-  const initializeApp = useCallback(async () => {
-    const savedUserName = await getUserName();
-    if (!savedUserName) {
-      setShowNamePrompt(true);
-    } else {
-      setUserName(savedUserName);
-      loadInterceptions();
-    }
-  }, [getUserName, loadInterceptions]);
-
-    useEffect(() => {
-    initializeApp();
-    loadConfig();
-  }, [initializeApp, loadConfig]);
-
-  const saveUserName = async (name) => {
-    // שם משתמש נשמר ב-localStorage
-    localStorage.setItem('userName', name);
   };
-
-  const handleSaveName = () => {
-    if (!tempName.trim()) {
-      alert('אנא הזן שם מלא');
-      return;
-    }
-    setUserName(tempName);
-    saveUserName(tempName);
-    setShowNamePrompt(false);
-    setShowNameEdit(false);
-    loadInterceptions();
-  };
-
-  const handleEditUserName = () => {
-    setTempName(userName);
-    setShowNameEdit(true);
-  };
-
-  // ============================================
-  // DATABASE CONFIGURATION - Supabase
-  // ============================================
-  
-  const SUPABASE_URL = 'https://xerogacrvmrbbawnhqdt.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhlcm9nYWNydm1yYmJhd25ocWR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzA0NzMsImV4cCI6MjA4Mjc0NjQ3M30.v0BmaZmy35ExecqZXNnjFoYk3k8ByR4skUWIuxkvSyk';
-  
-  // ============================================
-  // DATABASE FUNCTIONS - Supabase
-  // ============================================
 
   const saveToDatabase = async (data) => {
     try {
-      // נשתמש ב-UPSERT - עדכן אם קיים, הכנס אם חדש
-      const formatted = data.map(item => ({
-        id: item.id,
-        record_number: item.recordNumber,
-        name: item.name || '',
-        phone: item.phone || '',
-        hp: item.hp || '',
-        importance: item.importance || '',
-        call_nature: item.callNature || '',
-        source: item.source || '',
-        notes: item.notes || '',
-        assigned_agent: item.assignedAgent || '',
-        status: item.status || '',
-        agent_notes: item.agentNotes || '',
-        created_by: item.createdBy || '',
-        created_at: item.createdAt || ''
-      }));
-      
-      if (formatted.length > 0) {
-        const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions', {
-          method: 'POST',
+      // במקום למחוק ולהכניס מחדש, נעדכן כל רשומה בנפרד
+      for (const item of data) {
+        const formatted = {
+          id: item.id,
+          record_number: item.recordNumber,
+          name: item.name || '',
+          phone: item.phone || '',
+          hp: item.hp || '',
+          importance: item.importance || '',
+          call_nature: item.callNature || '',
+          source: item.source || '',
+          notes: item.notes || '',
+          assigned_agent: item.assignedAgent || '',
+          status: item.status || '',
+          agent_notes: item.agentNotes || '',
+          created_by: item.createdBy || '',
+          created_at: item.createdAt || ''
+        };
+        
+        // נסה לעדכן, אם לא קיים - הכנס חדש
+        const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?id=eq.' + item.id, {
+          method: 'PATCH',
           headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': 'Bearer ' + SUPABASE_KEY,
             'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=minimal'
+            'Prefer': 'resolution=merge-duplicates'
           },
           body: JSON.stringify(formatted)
         });
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Supabase error:', response.status, errorText);
-          throw new Error('Failed to save: ' + response.status);
+        // אם הרשומה לא קיימת, הכנס אותה
+        if (response.status === 404 || response.status === 406) {
+          await fetch(SUPABASE_URL + '/rest/v1/interceptions', {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_KEY,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(formatted)
+          });
         }
       }
       
       console.log('✅ Saved', data.length, 'records to Supabase');
-      
-      // רענן את הנתונים מה-DB
-      setTimeout(() => loadInterceptions(), 500);
     } catch (error) {
       console.error('Error saving to Supabase:', error);
       setFormError('שגיאה בשמירת נתונים');
@@ -358,38 +365,12 @@ const InterceptionSystem = () => {
     setDeleteConfirm(id);
   };
 
-  const confirmDelete = async () => {
-  try {
-    // מחק מה-DB
-    const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?id=eq.' + deleteConfirm, {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Prefer': 'return=minimal'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to delete from Supabase');
-    }
-    
-    // עדכן את המערך המקומי
+  const confirmDelete = () => {
     const updatedData = interceptions.filter(item => item.id !== deleteConfirm);
     setInterceptions(updatedData);
-    
-    console.log('✅ Deleted record from Supabase');
+    saveToDatabase(updatedData);
     setDeleteConfirm(null);
-    
-    // רענן מה-DB
-    setTimeout(() => loadInterceptions(), 300);
-  } catch (error) {
-    console.error('Error deleting from Supabase:', error);
-    setFormError('שגיאה במחיקת הרשומה');
-    setTimeout(() => setFormError(''), 3000);
-    setDeleteConfirm(null);
-  }
-};
+  };
 
   const filteredInterceptions = interceptions.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
