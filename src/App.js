@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Search, BarChart3, Edit2, X, Save, User } from 'lucide-react';
 
 const InterceptionSystem = () => {
@@ -38,28 +38,27 @@ const InterceptionSystem = () => {
   useEffect(() => {
     initializeApp();
     loadConfig();
-  }, []);
+  }, [initializeApp, loadConfig]);
 
-  const loadConfig = async () => {
+
+  const loadConfig = useCallback(async () => {
     try {
       const response = await fetch('/config.json');
       const data = await response.json();
-      
+  
       if (data.agents) setAgentOptions(data.agents);
       if (data.importance) setImportanceOptions(data.importance);
       if (data.callNature) setCallNatureOptions(data.callNature);
       if (data.source) setSourceOptions(data.source);
       if (data.status) setStatusOptions(data.status);
-      
+  
       console.log('✅ Loaded configuration');
     } catch (error) {
       console.error('Error loading config:', error);
-      // אם נכשל, השתמש ברשימות ברירת מחדל (כבר מוגדרות ב-state)
     }
-  };
+  }, []);
 
-  const initializeApp = async () => {
-    // בדיקת שם משתמש
+  const initializeApp = useCallback(async () => {
     const savedUserName = await getUserName();
     if (!savedUserName) {
       setShowNamePrompt(true);
@@ -67,7 +66,7 @@ const InterceptionSystem = () => {
       setUserName(savedUserName);
       loadInterceptions();
     }
-  };
+  }, []);
 
   const getUserName = async () => {
     // שם משתמש נשמר ב-localStorage
