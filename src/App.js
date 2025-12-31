@@ -69,22 +69,6 @@ const InterceptionSystem = () => {
     }
   }, []);
 
-  const initializeApp = useCallback(async () => {
-    // בדיקת שם משתמש
-    const savedUserName = await getUserName();
-    if (!savedUserName) {
-      setShowNamePrompt(true);
-    } else {
-      setUserName(savedUserName);
-      loadInterceptions();
-    }
-  }, [loadInterceptions]);
-
-  useEffect(() => {
-    initializeApp();
-    loadConfig();
-  }, [initializeApp, loadConfig]);
-
   const getUserName = async () => {
     // שם משתמש נשמר ב-localStorage
     return localStorage.getItem('userName');
@@ -163,6 +147,22 @@ const InterceptionSystem = () => {
       setTimeout(() => setFormError(''), 3000);
     }
   }, []);
+
+  const initializeApp = useCallback(async () => {
+    // בדיקת שם משתמש
+    const savedUserName = await getUserName();
+    if (!savedUserName) {
+      setShowNamePrompt(true);
+    } else {
+      setUserName(savedUserName);
+      loadInterceptions();
+    }
+  }, [loadInterceptions]);
+
+  useEffect(() => {
+    initializeApp();
+    loadConfig();
+  }, [initializeApp, loadConfig]);
 
   const saveToDatabase = async (data) => {
     try {
