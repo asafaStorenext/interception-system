@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Search, BarChart3, Edit2, X, Save, User } from 'lucide-react';
 
 const InterceptionSystem = () => {
@@ -35,25 +35,31 @@ const InterceptionSystem = () => {
   // ============================================
   // INITIALIZATION & USER MANAGEMENT
   // ============================================
-  
-  const loadConfig = useCallback(async () => {
+  useEffect(() => {
+    initializeApp();
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
     try {
       const response = await fetch('/config.json');
       const data = await response.json();
-  
+      
       if (data.agents) setAgentOptions(data.agents);
       if (data.importance) setImportanceOptions(data.importance);
       if (data.callNature) setCallNatureOptions(data.callNature);
       if (data.source) setSourceOptions(data.source);
       if (data.status) setStatusOptions(data.status);
-  
+      
       console.log('✅ Loaded configuration');
     } catch (error) {
       console.error('Error loading config:', error);
+      // אם נכשל, השתמש ברשימות ברירת מחדל (כבר מוגדרות ב-state)
     }
-  }, []);
+  };
 
-  const initializeApp = useCallback(async () => {
+  const initializeApp = async () => {
+    // בדיקת שם משתמש
     const savedUserName = await getUserName();
     if (!savedUserName) {
       setShowNamePrompt(true);
@@ -61,12 +67,7 @@ const InterceptionSystem = () => {
       setUserName(savedUserName);
       loadInterceptions();
     }
-  }, []);
-
-  useEffect(() => {
-    initializeApp();
-    loadConfig();
-  }, [initializeApp, loadConfig]);
+  };
 
   const getUserName = async () => {
     // שם משתמש נשמר ב-localStorage
@@ -149,53 +150,47 @@ const InterceptionSystem = () => {
 
   const saveToDatabase = async (data) => {
     try {
-      // במקום למחוק ולהכניס מחדש, נעדכן כל רשומה בנפרד
-      for (const item of data) {
-        const formatted = {
-          id: item.id,
-          record_number: item.recordNumber,
-          name: item.name || '',
-          phone: item.phone || '',
-          hp: item.hp || '',
-          importance: item.importance || '',
-          call_nature: item.callNature || '',
-          source: item.source || '',
-          notes: item.notes || '',
-          assigned_agent: item.assignedAgent || '',
-          status: item.status || '',
-          agent_notes: item.agentNotes || '',
-          created_by: item.createdBy || '',
-          created_at: item.createdAt || ''
-        };
-        
-        // נסה לעדכן, אם לא קיים - הכנס חדש
-        const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?id=eq.' + item.id, {
-          method: 'PATCH',
+      // נשתמש ב-UPSERT - עדכן אם קיים, הכנס אם חדש
+      const formatted = data.map(item => ({
+        id: item.id,
+        record_number: item.recordNumber,
+        name: item.name || '',
+        phone: item.phone || '',
+        hp: item.hp || '',
+        importance: item.importance || '',
+        call_nature: item.callNature || '',
+        source: item.source || '',
+        notes: item.notes || '',
+        assigned_agent: item.assignedAgent || '',
+        status: item.status || '',
+        agent_notes: item.agentNotes || '',
+        created_by: item.createdBy || '',
+        created_at: item.createdAt || ''
+      }));
+      
+      if (formatted.length > 0) {
+        const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions', {
+          method: 'POST',
           headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': 'Bearer ' + SUPABASE_KEY,
             'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates'
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
           },
           body: JSON.stringify(formatted)
         });
         
-        // אם הרשומה לא קיימת, הכנס אותה
-        if (response.status === 404 || response.status === 406) {
-          await fetch(SUPABASE_URL + '/rest/v1/interceptions', {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': 'Bearer ' + SUPABASE_KEY,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(formatted)
-          });
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Supabase error:', response.status, errorText);
+          throw new Error('Failed to save: ' + response.status);
         }
       }
       
       console.log('✅ Saved', data.length, 'records to Supabase');
+      
+      // רענן את הנתונים מה-DB
+      setTimeout(() => loadInterceptions(), 500);
     } catch (error) {
       console.error('Error saving to Supabase:', error);
       setFormError('שגיאה בשמירת נתונים');
