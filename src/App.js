@@ -358,12 +358,38 @@ const InterceptionSystem = () => {
     setDeleteConfirm(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+  try {
+    // מחק מה-DB
+    const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?id=eq.' + deleteConfirm, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer': 'return=minimal'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete from Supabase');
+    }
+    
+    // עדכן את המערך המקומי
     const updatedData = interceptions.filter(item => item.id !== deleteConfirm);
     setInterceptions(updatedData);
-    saveToDatabase(updatedData);
+    
+    console.log('✅ Deleted record from Supabase');
     setDeleteConfirm(null);
-  };
+    
+    // רענן מה-DB
+    setTimeout(() => loadInterceptions(), 300);
+  } catch (error) {
+    console.error('Error deleting from Supabase:', error);
+    setFormError('שגיאה במחיקת הרשומה');
+    setTimeout(() => setFormError(''), 3000);
+    setDeleteConfirm(null);
+  }
+};
 
   const filteredInterceptions = interceptions.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
