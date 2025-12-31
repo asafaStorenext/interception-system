@@ -36,78 +36,11 @@ const InterceptionSystem = () => {
   // INITIALIZATION & USER MANAGEMENT
   // ============================================
 
-  const loadConfig = useCallback(async () => {
-    try {
-      const response = await fetch('/config.json');
-      const data = await response.json();
-
-      if (data.agents) setAgentOptions(data.agents);
-      if (data.importance) setImportanceOptions(data.importance);
-      if (data.callNature) setCallNatureOptions(data.callNature);
-      if (data.source) setSourceOptions(data.source);
-      if (data.status) setStatusOptions(data.status);
-
-      console.log('✅ Loaded configuration');
-    } catch (error) {
-      console.error('Error loading config:', error);
-    }
+  const getUserName = useCallback(async () => {
+    return localStorage.getItem('userName');
   }, []);
 
-
-  const initializeApp = useCallback(async () => {
-    const savedUserName = await getUserName();
-    if (!savedUserName) {
-      setShowNamePrompt(true);
-    } else {
-      setUserName(savedUserName);
-      loadInterceptions();
-    }
-  }, [getUserName, loadInterceptions]);
-
-    useEffect(() => {
-    initializeApp();
-    loadConfig();
-  }, [initializeApp, loadConfig]);
-
-  const getUserName = async () => {
-    // שם משתמש נשמר ב-localStorage
-    return localStorage.getItem('userName');
-  };
-
-  const saveUserName = async (name) => {
-    // שם משתמש נשמר ב-localStorage
-    localStorage.setItem('userName', name);
-  };
-
-  const handleSaveName = () => {
-    if (!tempName.trim()) {
-      alert('אנא הזן שם מלא');
-      return;
-    }
-    setUserName(tempName);
-    saveUserName(tempName);
-    setShowNamePrompt(false);
-    setShowNameEdit(false);
-    loadInterceptions();
-  };
-
-  const handleEditUserName = () => {
-    setTempName(userName);
-    setShowNameEdit(true);
-  };
-
-  // ============================================
-  // DATABASE CONFIGURATION - Supabase
-  // ============================================
-  
-  const SUPABASE_URL = 'https://xerogacrvmrbbawnhqdt.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhlcm9nYWNydm1yYmJhd25ocWR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzA0NzMsImV4cCI6MjA4Mjc0NjQ3M30.v0BmaZmy35ExecqZXNnjFoYk3k8ByR4skUWIuxkvSyk';
-  
-  // ============================================
-  // DATABASE FUNCTIONS - Supabase
-  // ============================================
-  
-  const loadInterceptions = async () => {
+  const loadInterceptions = useCallback(async () => {
     try {
       const response = await fetch(SUPABASE_URL + '/rest/v1/interceptions?select=*&order=record_number.asc', {
         headers: {
@@ -146,7 +79,73 @@ const InterceptionSystem = () => {
       setFormError('שגיאה בטעינת נתונים. בדוק את החיבור ל-Supabase');
       setTimeout(() => setFormError(''), 3000);
     }
+  }, []); 
+  
+  const loadConfig = useCallback(async () => {
+    try {
+      const response = await fetch('/config.json');
+      const data = await response.json();
+
+      if (data.agents) setAgentOptions(data.agents);
+      if (data.importance) setImportanceOptions(data.importance);
+      if (data.callNature) setCallNatureOptions(data.callNature);
+      if (data.source) setSourceOptions(data.source);
+      if (data.status) setStatusOptions(data.status);
+
+      console.log('✅ Loaded configuration');
+    } catch (error) {
+      console.error('Error loading config:', error);
+    }
+  }, []);
+
+
+  const initializeApp = useCallback(async () => {
+    const savedUserName = await getUserName();
+    if (!savedUserName) {
+      setShowNamePrompt(true);
+    } else {
+      setUserName(savedUserName);
+      loadInterceptions();
+    }
+  }, [getUserName, loadInterceptions]);
+
+    useEffect(() => {
+    initializeApp();
+    loadConfig();
+  }, [initializeApp, loadConfig]);
+
+  const saveUserName = async (name) => {
+    // שם משתמש נשמר ב-localStorage
+    localStorage.setItem('userName', name);
   };
+
+  const handleSaveName = () => {
+    if (!tempName.trim()) {
+      alert('אנא הזן שם מלא');
+      return;
+    }
+    setUserName(tempName);
+    saveUserName(tempName);
+    setShowNamePrompt(false);
+    setShowNameEdit(false);
+    loadInterceptions();
+  };
+
+  const handleEditUserName = () => {
+    setTempName(userName);
+    setShowNameEdit(true);
+  };
+
+  // ============================================
+  // DATABASE CONFIGURATION - Supabase
+  // ============================================
+  
+  const SUPABASE_URL = 'https://xerogacrvmrbbawnhqdt.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhlcm9nYWNydm1yYmJhd25ocWR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxNzA0NzMsImV4cCI6MjA4Mjc0NjQ3M30.v0BmaZmy35ExecqZXNnjFoYk3k8ByR4skUWIuxkvSyk';
+  
+  // ============================================
+  // DATABASE FUNCTIONS - Supabase
+  // ============================================
 
   const saveToDatabase = async (data) => {
     try {
